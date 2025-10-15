@@ -43,19 +43,18 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await fetch("/api/usuarios");
-      const usuarios = await response.json();
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
 
-      const usuario = usuarios.find(
-        (u: { nombre: string; password: string }) =>
-          u.nombre === data.nombre && u.password === data.password,
-      );
-
-      if (usuario) {
-        localStorage.setItem("usuario", JSON.stringify(usuario));
+      if (response.ok) {
         router.push("/dashboard");
       } else {
-        setError("Credenciales incorrectas");
+        const res = await response.json().catch(() => ({}));
+        setError(res.error || "Credenciales incorrectas");
       }
     } catch {
       setError("Error al conectar con el servidor");

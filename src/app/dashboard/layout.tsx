@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, ArrowLeft } from "lucide-react";
 
@@ -12,8 +13,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 
+  useEffect(() => {
+    const verify = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (!res.ok) {
+          router.replace("/login");
+        }
+      } catch {
+        router.replace("/login");
+      }
+    };
+    verify();
+  }, [router]);
+
   const handleLogout = () => {
-    router.push("/login");
+    fetch("/api/auth/login", {
+      method: "DELETE",
+      credentials: "include",
+    }).finally(() => router.push("/login"));
   };
 
   const handleBackToDashboard = () => {

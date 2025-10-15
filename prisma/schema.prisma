@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id_usuario Int     @id @default(autoincrement())
+  nombre     String  @unique
+  password   String
+
+  @@map("usuarios")
+}
+
+model GrupoMuscular {
+  id_grupo_muscular Int         @id @default(autoincrement())
+  nombre            String      @unique
+  ejercicios        Ejercicio[]
+
+  @@map("grupos_musculares")
+}
+
+model Ejercicio {
+  id_ejercicio      Int               @id @default(autoincrement())
+  nombre            String
+  descripcion       String?
+  grupoMuscularId   Int
+  grupoMuscular     GrupoMuscular     @relation(fields: [grupoMuscularId], references: [id_grupo_muscular], onDelete: Cascade)
+  rutinas           RutinaEjercicio[]
+
+  @@map("ejercicios")
+}
+
+model Rutina {
+  id_rutina    Int               @id @default(autoincrement())
+  fecha        DateTime
+  genero       Genero
+  descripcion  String?
+  ejercicios   RutinaEjercicio[]
+
+  @@map("rutinas")
+}
+
+model RutinaEjercicio {
+  id            Int        @id @default(autoincrement())
+  rutinaId      Int
+  ejercicioId   Int
+  series        Int?
+  repeticiones  Int?
+  orden         Int?
+
+  rutina      Rutina    @relation(fields: [rutinaId], references: [id_rutina], onDelete: Cascade)
+  ejercicio   Ejercicio @relation(fields: [ejercicioId], references: [id_ejercicio], onDelete: Cascade)
+
+  @@map("rutina_ejercicios")
+}
+
+enum Genero {
+  hombre
+  mujer
+}
