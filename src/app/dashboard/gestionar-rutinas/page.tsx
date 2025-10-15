@@ -1,0 +1,371 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Calendar, Plus, Trash2, Dumbbell } from "lucide-react";
+import { DateUtils } from "@/lib/dateUtils";
+
+interface RutinaEjercicio {
+  id: number;
+  series: number | null;
+  repeticiones: number | null;
+  orden: number | null;
+  ejercicio: {
+    id_ejercicio: number;
+    nombre: string;
+    descripcion: string | null;
+    grupoMuscular: {
+      nombre: string;
+    };
+  };
+}
+
+interface Rutina {
+  id_rutina: number;
+  fecha: string;
+  genero: string;
+  descripcion: string | null;
+  ejercicios: RutinaEjercicio[];
+}
+
+export default function GestionarRutinasPage() {
+  const [rutinas, setRutinas] = useState<Rutina[]>([]);
+  const [rutinasFiltradas, setRutinasFiltradas] = useState<Rutina[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [generoFiltro, setGeneroFiltro] = useState<string>("");
+  const router = useRouter();
+
+  const fetchRutinas = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/rutinas");
+      if (response.ok) {
+        const data = await response.json();
+        setRutinas(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar rutinas:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchRutinas();
+  }, []);
+
+  useEffect(() => {
+    let filtradas = rutinas;
+
+    if (generoFiltro) {
+      filtradas = rutinas.filter((rutina) => rutina.genero === generoFiltro);
+    }
+
+    filtradas.sort((a, b) => {
+      const dateA = DateUtils.parseDate(a.fecha);
+      const dateB = DateUtils.parseDate(b.fecha);
+      return dateB.valueOf() - dateA.valueOf();
+    });
+
+    setRutinasFiltradas(filtradas);
+  }, [rutinas, generoFiltro]);
+
+  const formatDate = (dateString: string) => {
+    return DateUtils.formatForDisplay(dateString);
+  };
+
+  const handleDeleteRutina = async (id: number) => {
+    if (!confirm("¿Estás seguro de que quieres eliminar esta rutina?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/rutinas/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchRutinas();
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch {
+      alert("Error al eliminar la rutina");
+    }
+  };
+
+  const handleDeleteEjercicio = async (id: number) => {
+    if (
+      !confirm(
+        "¿Estás seguro de que quieres eliminar este ejercicio de la rutina?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/rutina-ejercicios/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchRutinas();
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch {
+      alert("Error al eliminar el ejercicio");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Cargando rutinas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Card className="mb-4 sm:mb-6">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-center">
+            <div className="w-full sm:w-auto">
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Filtrar por género:
+              </label>
+              <select
+                value={generoFiltro}
+                onChange={(e) => setGeneroFiltro(e.target.value)}
+                className="flex h-10 w-full sm:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Todos</option>
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+              </select>
+            </div>
+            <div className="sm:flex-1">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {rutinasFiltradas.length} de {rutinas.length} rutinas
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {rutinasFiltradas.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 px-4">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                No hay rutinas disponibles
+              </h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                {generoFiltro
+                  ? `No se encontraron rutinas para ${generoFiltro}`
+                  : "Crea algunas rutinas para comenzar"}
+              </p>
+              {!generoFiltro && (
+                <Button
+                  onClick={() => router.push("/dashboard/rutinas")}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Primera Rutina
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Rutinas Programadas
+            </CardTitle>
+            <CardDescription>
+              Haz clic en una rutina para ver los ejercicios detallados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {rutinasFiltradas.map((rutina) => (
+                <AccordionItem
+                  key={rutina.id_rutina}
+                  value={rutina.id_rutina.toString()}
+                >
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="text-left">
+                          <div className="font-medium text-base">
+                            {formatDate(rutina.fecha)}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 mt-2">
+                            <Badge
+                              className={
+                                rutina.genero === "hombre"
+                                  ? "bg-blue-950 text-white"
+                                  : "bg-pink-950 text-white"
+                              }
+                            >
+                              {rutina.genero === "hombre" ? "Hombre" : "Mujer"}
+                            </Badge>
+
+                            <span className="text-sm text-muted-foreground">
+                              {rutina.ejercicios.length} ejercicio
+                              {rutina.ejercicios.length !== 1 ? "s" : ""}
+                            </span>
+
+                            {rutina.descripcion && (
+                              <span className="text-sm text-muted-foreground max-w-xs truncate">
+                                • {rutina.descripcion}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="pt-4 border-t">
+                      {rutina.ejercicios.length === 0 ? (
+                        <div className="text-center py-6 px-4">
+                          <Dumbbell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm mb-4">
+                            Esta rutina no tiene ejercicios asignados
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`,
+                              )
+                            }
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Agregar Primer Ejercicio
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium text-foreground">
+                              Ejercicios ({rutina.ejercicios.length})
+                            </h4>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                router.push(
+                                  `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`,
+                                )
+                              }
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Agregar Ejercicio
+                            </Button>
+                          </div>
+                          <div className="space-y-3">
+                            {rutina.ejercicios
+                              .sort(
+                                (a, b) => (a.orden || 999) - (b.orden || 999),
+                              )
+                              .map((rutinaEjercicio) => (
+                                <div
+                                  key={rutinaEjercicio.id}
+                                  className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <span className="text-xs font-semibold text-primary">
+                                        {rutinaEjercicio.orden || "?"}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h5 className="font-medium text-foreground text-sm break-words">
+                                        {rutinaEjercicio.ejercicio.nombre}
+                                      </h5>
+                                      <div className="flex flex-wrap gap-2 sm:gap-4 text-xs text-muted-foreground mt-1">
+                                        <span className="text-primary/80">
+                                          {
+                                            rutinaEjercicio.ejercicio
+                                              .grupoMuscular.nombre
+                                          }
+                                        </span>
+                                        {rutinaEjercicio.series && (
+                                          <span>
+                                            {rutinaEjercicio.series} series
+                                          </span>
+                                        )}
+                                        {rutinaEjercicio.repeticiones && (
+                                          <span>
+                                            {rutinaEjercicio.repeticiones} reps
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleDeleteEjercicio(
+                                          rutinaEjercicio.id,
+                                        )
+                                      }
+                                      className="flex-shrink-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex justify-end pt-4 border-t mt-4">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteRutina(rutina.id_rutina)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar Rutina
+                        </Button>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
