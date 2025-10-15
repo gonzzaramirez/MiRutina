@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { Calendar, Check } from "lucide-react";
 import { DateUtils } from "@/lib/dateUtils";
-import { DatePicker } from "@/components/ui/date-picker";
+import DatePicker from "@/components/ui/date-picker";
 
 const rutinaSchema = z.object({
   fecha: z.date({
@@ -65,7 +65,7 @@ export default function RutinasPage() {
         body: JSON.stringify({
           ...data,
           fecha: DateUtils.formatForInput(
-            DateUtils.parseDate(data.fecha.toISOString()),
+            DateUtils.parseDate(data.fecha.toISOString())
           ),
         }),
       });

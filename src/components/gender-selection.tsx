@@ -1,8 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Card } from "@/components/ui/card";
-import { User, Users } from "lucide-react";
+import Image from "next/image";
 
 interface GenderSelectionProps {
   onSelect: (gender: "male" | "female") => void;
@@ -12,56 +11,50 @@ export const GenderSelection = memo(function GenderSelection({
   onSelect,
 }: GenderSelectionProps) {
   return (
-    <div className="container mx-auto px-4 py-12 md:py-20 max-w-3xl">
-      <div className="text-center mb-12">
-        <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-3 text-balance">
+    <div className="pt-16 flex flex-col items-center justify-center px-4">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-semibold text-foreground mb-2">
           Selecciona tu perfil
-        </h2>
-        <p className="text-muted-foreground">
-          Elige tu categoría para comenzar
+        </h1>
+        <p className="text-muted-foreground text-base">
+          Elige tu género para ver la rutina del día
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4 max-w-xl mx-auto">
-        <Card
-          className="p-6 cursor-pointer hover:border-primary/50 transition-colors group bg-card"
+      <div className="flex flex-col gap-6 w-full max-w-sm">
+        <button
           onClick={() => onSelect("male")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              onSelect("male");
-            }
-          }}
-          aria-label="Seleccionar perfil masculino"
+          className="flex flex-col items-center p-6 rounded-2xl bg-card shadow border border-border focus:outline-none"
         >
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-              <User className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-foreground">Hombre</h3>
-          </div>
-        </Card>
+          <Image
+            src="/hombre.png"
+            alt="Hombre"
+            width={100}
+            height={100}
+            priority
+            style={{ width: "auto", height: "auto" }}
+            className="rounded-full mb-4 object-cover"
+          />
+          <h3 className="text-xl font-semibold text-foreground">Hombre</h3>
+          <p className="text-muted-foreground text-sm">Perfil masculino</p>
+        </button>
 
-        <Card
-          className="p-6 cursor-pointer hover:border-primary/50 transition-colors group bg-card"
+        <button
           onClick={() => onSelect("female")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              onSelect("female");
-            }
-          }}
-          aria-label="Seleccionar perfil femenino"
+          className="flex flex-col items-center p-6 rounded-2xl bg-card shadow border border-border focus:outline-none"
         >
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-              <Users className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold text-foreground">Mujer</h3>
-          </div>
-        </Card>
+          <Image
+            src="/mujer.png"
+            alt="Mujer"
+            width={100}
+            height={100}
+            priority
+            style={{ width: "auto", height: "auto" }}
+            className="rounded-full mb-4 object-cover"
+          />
+          <h3 className="text-xl font-semibold text-foreground">Mujer</h3>
+          <p className="text-muted-foreground text-sm">Perfil femenino</p>
+        </button>
       </div>
     </div>
   );
