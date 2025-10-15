@@ -57,7 +57,10 @@ interface Ejercicio {
   id_ejercicio: number;
   nombre: string;
   descripcion?: string;
-  grupoMuscular?: string;
+  grupoMuscular?: {
+    id_grupo_muscular: number;
+    nombre: string;
+  };
 }
 
 function RutinaEjerciciosContent() {
@@ -66,10 +69,10 @@ function RutinaEjerciciosContent() {
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [ejercicios, setEjercicios] = useState<Ejercicio[]>([]);
   const [rutinaSeleccionada, setRutinaSeleccionada] = useState<Rutina | null>(
-    null,
+    null
   );
   const [ejerciciosRutina, setEjerciciosRutina] = useState<RutinaEjercicio[]>(
-    [],
+    []
   );
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,7 +109,7 @@ function RutinaEjerciciosContent() {
 
           if (rutinaIdFromUrl) {
             const rutinaPreseleccionada = rutinasData.find(
-              (r: Rutina) => r.id_rutina.toString() === rutinaIdFromUrl,
+              (r: Rutina) => r.id_rutina.toString() === rutinaIdFromUrl
             );
             if (rutinaPreseleccionada) {
               setRutinaSeleccionada(rutinaPreseleccionada);
@@ -179,7 +182,7 @@ function RutinaEjerciciosContent() {
   const handleDeleteEjercicio = async (id: number) => {
     if (
       !confirm(
-        "¿Estás seguro de que quieres eliminar este ejercicio de la rutina?",
+        "¿Estás seguro de que quieres eliminar este ejercicio de la rutina?"
       )
     ) {
       return;
@@ -284,8 +287,8 @@ function RutinaEjerciciosContent() {
                             value={ejercicio.id_ejercicio}
                           >
                             {ejercicio.nombre}
-                            {ejercicio.grupoMuscular &&
-                              ` (${ejercicio.grupoMuscular})`}
+                            {ejercicio.grupoMuscular?.nombre &&
+                              ` (${ejercicio.grupoMuscular.nombre})`}
                           </option>
                         ))}
                       </select>
@@ -424,7 +427,7 @@ function RutinaEjerciciosContent() {
                         </h5>
                         <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1">
                           <span className="text-primary/80 font-medium">
-                            {rutinaEjercicio.ejercicio.grupoMuscular ||
+                            {rutinaEjercicio.ejercicio.grupoMuscular?.nombre ||
                               "Sin grupo"}
                           </span>
                           {rutinaEjercicio.series && (
