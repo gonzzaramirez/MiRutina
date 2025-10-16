@@ -144,7 +144,7 @@ export function ExerciseList({ gender }: ExerciseListProps) {
             <CardContent className="pt-6 text-center">
               <Dumbbell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                Rutina vacía
+                Rutina vacía.
               </h3>
               <p className="text-muted-foreground">
                 Esta rutina no tiene ejercicios asignados aún.
