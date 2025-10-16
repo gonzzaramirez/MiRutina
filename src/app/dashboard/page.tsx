@@ -27,12 +27,7 @@ export default function DashboardPage() {
       icon: Calendar,
       href: "/dashboard/rutinas",
     },
-    {
-      title: "Asignar a Rutinas",
-      description: "Agregar ejercicios a rutinas",
-      icon: Plus,
-      href: "/dashboard/rutina-ejercicios",
-    },
+
     {
       title: "Gestionar Rutinas",
       description: "Editar rutinas existentes",
