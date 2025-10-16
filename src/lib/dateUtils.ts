@@ -25,41 +25,48 @@ export function today(): dayjs.Dayjs {
 }
 
 /**
- * Convierte una fecha string a Dayjs en la zona horaria configurada
+ * Convierte un valor de fecha (string, Date o Dayjs) a Dayjs en la zona horaria configurada
  */
-export function parseDate(dateString: string): dayjs.Dayjs {
-  return dayjs(dateString).tz(TIMEZONE);
+export function parseDate(date: string | Date | dayjs.Dayjs): dayjs.Dayjs {
+  if (typeof date === "string") {
+    return dayjs(date).tz(TIMEZONE);
+  }
+  if (date instanceof Date) {
+    return dayjs(date).tz(TIMEZONE);
+  }
+  // ya es un objeto dayjs
+  return date.tz ? date.tz(TIMEZONE) : dayjs(date).tz(TIMEZONE);
 }
 
 /**
  * Formatea una fecha para mostrar en la interfaz de usuario
  */
-export function formatForDisplay(date: dayjs.Dayjs | string): string {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function formatForDisplay(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
   return dayjsDate.format("dddd, D [de] MMMM [de] YYYY");
 }
 
 /**
  * Formatea una fecha de forma corta para mostrar en la interfaz
  */
-export function formatShort(date: dayjs.Dayjs | string): string {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function formatShort(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
   return dayjsDate.format("DD MMM YYYY");
 }
 
 /**
  * Formatea una fecha para el input de tipo date (YYYY-MM-DD)
  */
-export function formatForInput(date: dayjs.Dayjs | string): string {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function formatForInput(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
   return dayjsDate.format("YYYY-MM-DD");
 }
 
 /**
  * Convierte una fecha a formato ISO para la base de datos
  */
-export function toISOString(date: dayjs.Dayjs | string): string {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function toISOString(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
   return dayjsDate.toISOString();
 }
 
@@ -73,24 +80,24 @@ export function todayForInput(): string {
 /**
  * Verifica si una fecha es hoy
  */
-export function isToday(date: dayjs.Dayjs | string): boolean {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function isToday(date: dayjs.Dayjs | string | Date): boolean {
+  const dayjsDate = parseDate(date);
   return dayjsDate.isSame(today(), "day");
 }
 
 /**
  * Verifica si una fecha es ayer
  */
-export function isYesterday(date: dayjs.Dayjs | string): boolean {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function isYesterday(date: dayjs.Dayjs | string | Date): boolean {
+  const dayjsDate = parseDate(date);
   return dayjsDate.isSame(today().subtract(1, "day"), "day");
 }
 
 /**
  * Obtiene una fecha relativa (hoy, ayer, hace X días)
  */
-export function getRelativeDate(date: dayjs.Dayjs | string): string {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+export function getRelativeDate(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
 
   if (isToday(dayjsDate)) {
     return "Hoy";
@@ -105,7 +112,7 @@ export function getRelativeDate(date: dayjs.Dayjs | string): string {
  * Crea un rango de fechas para consultas
  */
 export function createDateRange(date: dayjs.Dayjs | string) {
-  const dayjsDate = typeof date === "string" ? parseDate(date) : date;
+  const dayjsDate = parseDate(date);
   return {
     start: dayjsDate.startOf("day").toISOString(),
     end: dayjsDate.endOf("day").toISOString(),
@@ -117,6 +124,14 @@ export function createDateRange(date: dayjs.Dayjs | string) {
  */
 export function isValidDate(date: string): boolean {
   return dayjs(date).isValid();
+}
+
+/**
+ * Devuelve el nombre corto del mes en español (p. ej. "ene", "feb")
+ */
+export function formatMonthShort(date: dayjs.Dayjs | string | Date): string {
+  const dayjsDate = parseDate(date);
+  return dayjsDate.format("MMM");
 }
 
 /**
@@ -136,6 +151,7 @@ export class DateUtils {
   static getRelativeDate = getRelativeDate;
   static createDateRange = createDateRange;
   static isValidDate = isValidDate;
+  static formatMonthShort = formatMonthShort;
 }
 
 export default DateUtils;
