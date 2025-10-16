@@ -57,6 +57,7 @@ model RutinaEjercicio {
   ejercicio   Ejercicio @relation(fields: [ejercicioId], references: [id_ejercicio], onDelete: Cascade)
 
   @@map("rutina_ejercicios")
+  @@unique([rutinaId, ejercicioId], name: "unique_rutina_ejercicio")
 }
 
 enum Genero {

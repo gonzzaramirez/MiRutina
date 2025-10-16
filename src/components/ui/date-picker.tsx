@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { DateUtils } from "@/lib/dateUtils";
 import {
   Popover,
   PopoverContent,
@@ -73,7 +73,7 @@ export default function DatePicker({
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {internalDate ? (
-            format(internalDate, "PPP", { locale: es })
+            DateUtils.formatForDisplay(internalDate)
           ) : (
             <span>{placeholder}</span>
           )}

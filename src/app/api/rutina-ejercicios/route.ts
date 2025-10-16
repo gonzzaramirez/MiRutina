@@ -83,6 +83,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Evitar duplicados: una rutina no puede tener el mismo ejercicio dos veces
+    const exists = await prisma.rutinaEjercicio.findFirst({
+      where: { rutinaId, ejercicioId },
+      select: { id: true },
+    });
+    if (exists) {
+      return NextResponse.json(
+        { error: "La rutina ya contiene este ejercicio" },
+        { status: 409 }
+      );
+    }
+
     const rutinaEjercicio = await prisma.rutinaEjercicio.create({
       data: {
         rutinaId,
@@ -99,6 +111,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(rutinaEjercicio, { status: 201 });
   } catch (error: unknown) {
+    if ((error as { code?: string })?.code === "P2002") {
+      return NextResponse.json(
+        { error: "La rutina ya contiene este ejercicio" },
+        { status: 409 }
+      );
+    }
     console.error("Error al crear ejercicio de rutina:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },

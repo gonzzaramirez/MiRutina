@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import DatePicker from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -48,6 +49,11 @@ export default function GestionarRutinasPage() {
   const [rutinasFiltradas, setRutinasFiltradas] = useState<Rutina[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [generoFiltro, setGeneroFiltro] = useState<string>("");
+  const [reassignRutinaId, setReassignRutinaId] = useState<number | null>(null);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [duplicateDate, setDuplicateDate] = useState<Date | undefined>(
+    undefined
+  );
   const router = useRouter();
 
   const fetchRutinas = async () => {
@@ -109,10 +115,37 @@ export default function GestionarRutinasPage() {
     }
   };
 
+  const handleDuplicateRutina = async (id: number) => {
+    if (!duplicateDate) {
+      alert("Selecciona una fecha para duplicar la rutina");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/rutinas/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fecha: DateUtils.formatForInput(duplicateDate),
+        }),
+      });
+      if (response.ok) {
+        setReassignRutinaId(null);
+        setShowReassignModal(false);
+        setDuplicateDate(undefined);
+        fetchRutinas();
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch {
+      alert("Error al duplicar la rutina");
+    }
+  };
+
   const handleDeleteEjercicio = async (id: number) => {
     if (
       !confirm(
-        "¿Estás seguro de que quieres eliminar este ejercicio de la rutina?",
+        "¿Estás seguro de que quieres eliminar este ejercicio de la rutina?"
       )
     ) {
       return;
@@ -251,6 +284,7 @@ export default function GestionarRutinasPage() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="pt-4 border-t">
+                      {/* Se quita el botón de reasignar de aquí para moverlo abajo, junto a eliminar */}
                       {rutina.ejercicios.length === 0 ? (
                         <div className="text-center py-6 px-4">
                           <Dumbbell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -262,7 +296,7 @@ export default function GestionarRutinasPage() {
                             size="sm"
                             onClick={() =>
                               router.push(
-                                `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`,
+                                `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`
                               )
                             }
                           >
@@ -273,15 +307,12 @@ export default function GestionarRutinasPage() {
                       ) : (
                         <div className="space-y-4">
                           <div className="flex justify-between items-center">
-                            <h4 className="font-medium text-foreground">
-                              Ejercicios ({rutina.ejercicios.length})
-                            </h4>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() =>
                                 router.push(
-                                  `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`,
+                                  `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`
                                 )
                               }
                             >
@@ -292,7 +323,7 @@ export default function GestionarRutinasPage() {
                           <div className="space-y-3">
                             {rutina.ejercicios
                               .sort(
-                                (a, b) => (a.orden || 999) - (b.orden || 999),
+                                (a, b) => (a.orden || 999) - (b.orden || 999)
                               )
                               .map((rutinaEjercicio) => (
                                 <div
@@ -335,7 +366,7 @@ export default function GestionarRutinasPage() {
                                       size="sm"
                                       onClick={() =>
                                         handleDeleteEjercicio(
-                                          rutinaEjercicio.id,
+                                          rutinaEjercicio.id
                                         )
                                       }
                                       className="flex-shrink-0"
@@ -348,13 +379,25 @@ export default function GestionarRutinasPage() {
                           </div>
                         </div>
                       )}
-                      <div className="flex justify-end pt-4 border-t mt-4">
+
+                      <div className="flex justify-between pt-4 border-t mt-4 gap-2">
+                        <Button
+                          size="default"
+                          variant="outline"
+                          className="flex items-center px-4 py-2 text-xs h-8"
+                          onClick={() => {
+                            setReassignRutinaId(rutina.id_rutina);
+                            setShowReassignModal(true);
+                          }}
+                        >
+                          Reasignar a otro día
+                        </Button>
                         <Button
                           variant="destructive"
-                          size="sm"
+                          size="default"
+                          className="flex items-center px-4 py-2 text-xs h-8"
                           onClick={() => handleDeleteRutina(rutina.id_rutina)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
                           Eliminar Rutina
                         </Button>
                       </div>
@@ -365,6 +408,77 @@ export default function GestionarRutinasPage() {
             </Accordion>
           </CardContent>
         </Card>
+      )}
+      {showReassignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Fondo borroso con click fuera */}
+          <div
+            className="absolute inset-0 backdrop-blur-sm bg-black/40 transition-opacity"
+            onClick={() => {
+              setShowReassignModal(false);
+              setReassignRutinaId(null);
+              setDuplicateDate(undefined);
+            }}
+          />
+
+          {/* Contenedor del modal */}
+          <div className="relative z-50 w-full max-w-md bg-background rounded-2xl shadow-xl border p-6 animate-in fade-in-0 zoom-in-95">
+            {/* Header del modal */}
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Reasignar rutina</h2>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Seleccioná la nueva fecha a la que querés mover esta rutina. Se
+              duplicará el contenido del día original.
+            </p>
+
+            {/* DatePicker */}
+            <div className="mb-6">
+              <DatePicker
+                date={duplicateDate}
+                onDateChange={setDuplicateDate}
+                placeholder="Elegí la nueva fecha"
+                className="w-full"
+              />
+              {duplicateDate && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Fecha seleccionada:{" "}
+                  <span className="font-medium text-foreground">
+                    {DateUtils.formatForDisplay(
+                      DateUtils.formatForInput(duplicateDate)
+                    )}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {/* Botones */}
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReassignModal(false);
+                  setReassignRutinaId(null);
+                  setDuplicateDate(undefined);
+                }}
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                onClick={() =>
+                  reassignRutinaId && handleDuplicateRutina(reassignRutinaId)
+                }
+                disabled={!duplicateDate}
+                className="transition-transform hover:scale-[1.02]"
+              >
+                Reasignar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

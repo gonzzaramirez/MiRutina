@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { DateUtils } from "@/lib/dateUtils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,6 +69,7 @@ function RutinaEjerciciosContent() {
   const [success, setSuccess] = useState(false);
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [ejercicios, setEjercicios] = useState<Ejercicio[]>([]);
+  const [ejerciciosAsignados, setEjerciciosAsignados] = useState<number[]>([]);
   const [rutinaSeleccionada, setRutinaSeleccionada] = useState<Rutina | null>(
     null
   );
@@ -114,6 +116,11 @@ function RutinaEjerciciosContent() {
             if (rutinaPreseleccionada) {
               setRutinaSeleccionada(rutinaPreseleccionada);
               setEjerciciosRutina(rutinaPreseleccionada.ejercicios || []);
+              setEjerciciosAsignados(
+                (rutinaPreseleccionada.ejercicios || []).map(
+                  (re: RutinaEjercicio) => re.ejercicioId
+                )
+              );
             }
           }
         }
@@ -132,6 +139,9 @@ function RutinaEjerciciosContent() {
       setRutinaSeleccionada(rutina || null);
       if (rutina) {
         setEjerciciosRutina(rutina.ejercicios || []);
+        setEjerciciosAsignados(
+          (rutina.ejercicios || []).map((re: RutinaEjercicio) => re.ejercicioId)
+        );
       }
     }
   }, [form, rutinas]);
@@ -170,7 +180,11 @@ function RutinaEjerciciosContent() {
         setTimeout(() => setSuccess(false), 3000);
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        if (response.status === 409) {
+          alert("Esta rutina ya contiene ese ejercicio");
+        } else {
+          alert(`Error: ${error.error}`);
+        }
       }
     } catch {
       alert("Error al asignar ejercicio a la rutina");
@@ -208,9 +222,8 @@ function RutinaEjerciciosContent() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES");
-  };
+  const formatDate = (dateString: string) =>
+    DateUtils.formatForDisplay(dateString);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -281,16 +294,20 @@ function RutinaEjerciciosContent() {
                         className="flex h-12 w-full rounded-md border border-input bg-background px-4 py-3 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation"
                       >
                         <option value="">Selecciona un ejercicio</option>
-                        {ejercicios.map((ejercicio) => (
-                          <option
-                            key={ejercicio.id_ejercicio}
-                            value={ejercicio.id_ejercicio}
-                          >
-                            {ejercicio.nombre}
-                            {ejercicio.grupoMuscular?.nombre &&
-                              ` (${ejercicio.grupoMuscular.nombre})`}
-                          </option>
-                        ))}
+                        {ejercicios
+                          .filter(
+                            (e) => !ejerciciosAsignados.includes(e.id_ejercicio)
+                          )
+                          .map((ejercicio) => (
+                            <option
+                              key={ejercicio.id_ejercicio}
+                              value={ejercicio.id_ejercicio}
+                            >
+                              {ejercicio.nombre}
+                              {ejercicio.grupoMuscular?.nombre &&
+                                ` (${ejercicio.grupoMuscular.nombre})`}
+                            </option>
+                          ))}
                       </select>
                     </FormControl>
                     <FormMessage />
