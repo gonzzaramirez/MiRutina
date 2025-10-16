@@ -29,6 +29,13 @@ export function today(): dayjs.Dayjs {
  */
 export function parseDate(date: string | Date | dayjs.Dayjs): dayjs.Dayjs {
   if (typeof date === "string") {
+    // Si viene como "YYYY-MM-DD", interpretamos esa fecha en la zona horaria destino
+    // para evitar corrimientos por el huso horario del servidor (p. ej. UTC en Vercel)
+    const isPlainYmd = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    if (isPlainYmd) {
+      return dayjs.tz(date, TIMEZONE);
+    }
+    // Para strings con hora/offset/ISO, parseamos el instante y lo convertimos a la zona
     return dayjs(date).tz(TIMEZONE);
   }
   if (date instanceof Date) {
