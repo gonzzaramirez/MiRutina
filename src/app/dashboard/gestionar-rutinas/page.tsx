@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/accordion";
 import { Calendar, Plus, Trash2, Dumbbell } from "lucide-react";
 import { DateUtils } from "@/lib/dateUtils";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface RutinaEjercicio {
   id: number;
@@ -44,6 +46,16 @@ interface Rutina {
   ejercicios: RutinaEjercicio[];
 }
 
+interface Ejercicio {
+  id_ejercicio: number;
+  nombre: string;
+  descripcion?: string | null;
+  grupoMuscular?: {
+    id_grupo_muscular: number;
+    nombre: string;
+  };
+}
+
 export default function GestionarRutinasPage() {
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [rutinasFiltradas, setRutinasFiltradas] = useState<Rutina[]>([]);
@@ -54,6 +66,17 @@ export default function GestionarRutinasPage() {
   const [duplicateDate, setDuplicateDate] = useState<Date | undefined>(
     undefined
   );
+  const [showAddExercisesModal, setShowAddExercisesModal] = useState(false);
+  const [addToRutinaId, setAddToRutinaId] = useState<number | null>(null);
+  const [isAddingExercises, setIsAddingExercises] = useState(false);
+  const [ejercicios, setEjercicios] = useState<Ejercicio[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEjercicios, setSelectedEjercicios] = useState<Set<number>>(
+    new Set()
+  );
+  const [selectedValues, setSelectedValues] = useState<
+    Record<number, { series: string; repeticiones: string; orden: string }>
+  >({});
   const router = useRouter();
 
   const fetchRutinas = async () => {
@@ -165,6 +188,109 @@ export default function GestionarRutinasPage() {
     } catch {
       alert("Error al eliminar el ejercicio");
     }
+  };
+
+  const openAddExercisesModal = async (rutinaId: number) => {
+    setAddToRutinaId(rutinaId);
+    setShowAddExercisesModal(true);
+    setSearchTerm("");
+    setSelectedEjercicios(new Set());
+    setSelectedValues({});
+    try {
+      const response = await fetch("/api/ejercicios");
+      if (response.ok) {
+        const data = await response.json();
+        setEjercicios(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar ejercicios:", error);
+    }
+  };
+
+  const toggleSelectEjercicio = (id: number) => {
+    const currentlySelected = selectedEjercicios.has(id);
+    setSelectedEjercicios((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSelectedValues((prev) => {
+      const copy = { ...prev };
+      if (currentlySelected) {
+        delete copy[id];
+      } else if (!copy[id]) {
+        copy[id] = { series: "", repeticiones: "", orden: "" };
+      }
+      return copy;
+    });
+  };
+
+  const handleAddSelectedExercises = async () => {
+    if (!addToRutinaId || selectedEjercicios.size === 0) return;
+    setIsAddingExercises(true);
+    try {
+      const ids = Array.from(selectedEjercicios);
+      await Promise.all(
+        ids.map((ejercicioId) =>
+          fetch("/api/rutina-ejercicios", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              rutinaId: addToRutinaId,
+              ejercicioId,
+              series: (() => {
+                const raw = selectedValues[ejercicioId]?.series?.trim() ?? "";
+                if (raw === "") return null;
+                const val = parseInt(raw, 10);
+                return Number.isNaN(val) ? null : val;
+              })(),
+              repeticiones: (() => {
+                const raw =
+                  selectedValues[ejercicioId]?.repeticiones?.trim() ?? "";
+                if (raw === "") return null;
+                const val = parseInt(raw, 10);
+                return Number.isNaN(val) ? null : val;
+              })(),
+              orden: (() => {
+                const raw = selectedValues[ejercicioId]?.orden?.trim() ?? "";
+                if (raw === "") return null;
+                const val = parseInt(raw, 10);
+                return Number.isNaN(val) ? null : val;
+              })(),
+            }),
+          }).then(async (res) => {
+            if (!res.ok && res.status !== 409) {
+              const err = await res.json().catch(() => ({ error: "Error" }));
+              console.error("Error agregando ejercicio:", err.error);
+            }
+          })
+        )
+      );
+      setShowAddExercisesModal(false);
+      setAddToRutinaId(null);
+      setSelectedEjercicios(new Set());
+      setSelectedValues({});
+      fetchRutinas();
+    } catch (error) {
+      console.error("Error al agregar ejercicios:", error);
+    } finally {
+      setIsAddingExercises(false);
+    }
+  };
+
+  const handleSelectedValueChange = (
+    ejercicioId: number,
+    field: "series" | "repeticiones" | "orden",
+    value: string
+  ) => {
+    setSelectedValues((prev) => ({
+      ...prev,
+      [ejercicioId]: {
+        ...(prev[ejercicioId] || { series: "", repeticiones: "", orden: "" }),
+        [field]: value,
+      },
+    }));
   };
 
   if (isLoading) {
@@ -295,9 +421,7 @@ export default function GestionarRutinasPage() {
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              router.push(
-                                `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`
-                              )
+                              openAddExercisesModal(rutina.id_rutina)
                             }
                           >
                             <Plus className="h-4 w-4 mr-2" />
@@ -311,9 +435,7 @@ export default function GestionarRutinasPage() {
                               variant="outline"
                               size="sm"
                               onClick={() =>
-                                router.push(
-                                  `/dashboard/rutina-ejercicios?rutinaId=${rutina.id_rutina}`
-                                )
+                                openAddExercisesModal(rutina.id_rutina)
                               }
                             >
                               <Plus className="h-4 w-4 mr-2" />
@@ -476,6 +598,163 @@ export default function GestionarRutinasPage() {
               >
                 Reasignar
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddExercisesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 backdrop-blur-sm bg-black/40 transition-opacity"
+            onClick={() => {
+              setShowAddExercisesModal(false);
+              setAddToRutinaId(null);
+              setSelectedEjercicios(new Set());
+              setSelectedValues({});
+            }}
+          />
+          <div className="relative z-50 w-full max-w-2xl max-h-[90vh] bg-background rounded-2xl shadow-xl border flex flex-col animate-in fade-in-0 zoom-in-95">
+            <div className="p-6 pb-4 flex-shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <Dumbbell className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Agregar ejercicios</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Seleccioná uno o más ejercicios para agregarlos a la rutina.
+              </p>
+              <div className="mb-4">
+                <Input
+                  placeholder="Buscar por nombre"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 px-6">
+              <ScrollArea className="h-[350px] sm:h-[300px] border rounded-lg">
+                <ul className="divide-y">
+                  {ejercicios
+                    .filter((e) =>
+                      e.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .filter((e) => {
+                      const asignados =
+                        rutinas.find((r) => r.id_rutina === addToRutinaId)
+                          ?.ejercicios || [];
+                      const asignadosIds = new Set(
+                        asignados.map((x) => x.ejercicio.id_ejercicio)
+                      );
+                      return !asignadosIds.has(e.id_ejercicio);
+                    })
+                    .map((e) => (
+                      <li
+                        key={e.id_ejercicio}
+                        className="flex flex-col gap-2 p-3 hover:bg-muted/50"
+                      >
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 mt-1"
+                            checked={selectedEjercicios.has(e.id_ejercicio)}
+                            onChange={() =>
+                              toggleSelectEjercicio(e.id_ejercicio)
+                            }
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-sm break-words">
+                              {e.nombre}
+                            </div>
+                            {e.grupoMuscular?.nombre && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {e.grupoMuscular.nombre}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {selectedEjercicios.has(e.id_ejercicio) && (
+                          <div className="ml-7 flex flex-col sm:flex-row gap-2 items-center sm:items-start">
+                            <Input
+                              type="number"
+                              min={1}
+                              inputMode="numeric"
+                              placeholder="Series"
+                              value={
+                                selectedValues[e.id_ejercicio]?.series ?? ""
+                              }
+                              onChange={(ev) =>
+                                handleSelectedValueChange(
+                                  e.id_ejercicio,
+                                  "series",
+                                  ev.target.value
+                                )
+                              }
+                              className="h-8 w-20 sm:w-24 text-xs text-center"
+                            />
+                            <Input
+                              type="number"
+                              min={1}
+                              inputMode="numeric"
+                              placeholder="Reps"
+                              value={
+                                selectedValues[e.id_ejercicio]?.repeticiones ??
+                                ""
+                              }
+                              onChange={(ev) =>
+                                handleSelectedValueChange(
+                                  e.id_ejercicio,
+                                  "repeticiones",
+                                  ev.target.value
+                                )
+                              }
+                              className="h-8 w-20 sm:w-24 text-xs text-center"
+                            />
+                            <Input
+                              type="number"
+                              min={1}
+                              inputMode="numeric"
+                              placeholder="Orden"
+                              value={
+                                selectedValues[e.id_ejercicio]?.orden ?? ""
+                              }
+                              onChange={(ev) =>
+                                handleSelectedValueChange(
+                                  e.id_ejercicio,
+                                  "orden",
+                                  ev.target.value
+                                )
+                              }
+                              className="h-8 w-20 sm:w-20 text-xs text-center"
+                            />
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                </ul>
+              </ScrollArea>
+            </div>
+            <div className="p-6 pt-4 flex-shrink-0 border-t">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddExercisesModal(false);
+                    setAddToRutinaId(null);
+                    setSelectedEjercicios(new Set());
+                    setSelectedValues({});
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleAddSelectedExercises}
+                  disabled={isAddingExercises || selectedEjercicios.size === 0}
+                  className="w-full sm:w-auto transition-transform hover:scale-[1.02]"
+                >
+                  {isAddingExercises ? "Agregando..." : "Agregar seleccionados"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
